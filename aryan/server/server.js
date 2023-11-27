@@ -1,89 +1,112 @@
 const express = require('express');
-const mysql = require('mysql2');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const { Sequelize, DataTypes } = require('sequelize');
 
 const app = express();
 const port = 3001;
 
-const db = mysql.createConnection({
+// Sequelize configuration
+const sequelize = new Sequelize({
+  dialect: 'mysql',
   host: 'localhost',
-  user: 'root',
-  password: 'aryan',
+  username: 'root',
+  password: 'ycyc',
   database: 'restaurant_db',
 });
 
-db.connect((err) => {
-  if (err) {
-    console.error('Error connecting to MySQL:', err);
-  } else {
-    console.log('Connected to MySQL database');
-  }
+//Restaurant model
+const Restaurant = sequelize.define('Restaurant', {
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  address: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  contact: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  }}  , {
+    timestamps: false,
 });
+
 
 app.use(cors());
 app.use(bodyParser.json());
 
-app.post('/savedata', (req, res) => {
-    console.log("/savedata is called");
+
+app.post('/savedata', async (req, res) => {
   const { name, address, contact } = req.body;
 
-  if (!name || !address || !contact) {
-    return res.status(400).json({ message: 'Name, address, and contact are required' });
-  }
+  try {
+    const restaurant = await Restaurant.create({
+      name,
+      address,
+      contact,
+    });
 
-  const sql = 'INSERT INTO restaurants (name, address, contact) VALUES (?, ?, ?)';
-  db.query(sql, [name, address, contact], (err, result) => {
-    if (err) {
-      console.error('Error saving data:', err);
-      return res.status(500).json({ message: 'Internal server error' });
-    }
-
-    console.log('Data saved successfully');
+    console.log('Data saved successfully:', restaurant.toJSON());
     return res.status(200).json({ message: 'Data saved successfully' });
-  });
+  } catch (error) {
+    console.error('Error saving data:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
-app.get('/showdata', (req, res) => {
-  const sql = 'SELECT * FROM restaurants';
-  db.query(sql, (err, results) => {
-    if (err) {
-      console.error('Error fetching data:', err);
-      return res.status(500).json({ message: 'Internal server error' });
-    }
+app.get('/showdata', async (req, res) => {
+  try {
+    const restaurants = await Restaurant.findAll();
 
-    return res.status(200).json(results);
-  });
+    console.log('Data fetched successfully:', restaurants.map((r) => r.toJSON()));
+    return res.status(200).json(restaurants);
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
-app.put('/edit/:id', (req, res) => {
+app.put('/edit/:id', async (req, res) => {
   const { id } = req.params;
   const { name, address, contact } = req.body;
 
-  const sql = 'UPDATE restaurants SET name=?, address=?, contact=? WHERE id=?';
-  db.query(sql, [name, address, contact, id], (err, result) => {
-    if (err) {
-      console.error('Error updating data:', err);
-      return res.status(500).json({ message: 'Internal server error' });
-    }
+  try {
+    await Restaurant.update(
+      { name, address, contact },
+      {
+        where: {
+          id,
+        },
+      }
+    );
 
+    console.log('Data updated successfully');
     return res.status(200).json({ message: 'Data updated successfully' });
-  });
+  } catch (error) {
+    console.error('Error updating data:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
-app.delete('/delete/:id', (req, res) => {
+app.delete('/delete/:id', async (req, res) => {
   const { id } = req.params;
 
-  const sql = 'DELETE FROM restaurants WHERE id=?';
-  db.query(sql, [id], (err, result) => {
-    if (err) {
-      console.error('Error deleting data:', err);
-      return res.status(500).json({ message: 'Internal server error' });
-    }
+  try {
+    await Restaurant.destroy({
+      where: {
+        id,
+      },
+    });
 
+    console.log('Data deleted successfully');
     return res.status(200).json({ message: 'Data deleted successfully' });
-  });
+  } catch (error) {
+    console.error('Error deleting data:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
 });
+
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);

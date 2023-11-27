@@ -1,0 +1,11 @@
+{
+    "dev": {
+      "driver": "mysql",
+      "user": "root",
+      "password": "aryan",
+      "host": "localhost",
+      "database": "restaurant_db",
+      "multipleStatements": true
+    }
+  }
+  
